@@ -145,10 +145,16 @@ class ScaffoldWithNavBar extends StatelessWidget {
 }
 
 /// The first screen in the bottom navigation bar.
-class ScreenA extends StatelessWidget {
+class ScreenA extends StatefulWidget {
   /// Constructs a [ScreenA] widget.
   const ScreenA({super.key});
 
+  @override
+  State<ScreenA> createState() => _ScreenAState();
+}
+
+class _ScreenAState extends State<ScreenA> {
+  int count = 0;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -158,6 +164,17 @@ class ScreenA extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             const Text('Screen A'),
+            const SizedBox(height: 16),
+            Text('Count: $count'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    count++;
+                  });
+                },
+                child: const Text('Increment')),
+            const SizedBox(height: 16),
             TextButton(
               onPressed: () {
                 GoRouter.of(context).go('/a/details');
