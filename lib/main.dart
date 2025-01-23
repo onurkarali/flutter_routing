@@ -11,15 +11,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Extended Nested Navigation',
+      title: 'Nested Navigation with Counters',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const HomeScreen(),
     );
   }
 }
 
-/// The top-level [HomeScreen] that holds the bottom navigation bar and
-/// an [IndexedStack] of navigators (one per tab).
+/// The top-level [HomeScreen] that holds the bottom navigation bar
+/// and an [IndexedStack] of navigators (one per tab).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
     GlobalKey<NavigatorState>(),
   ];
 
-  /// Intercept the Android system back button or any back pop from the scaffold.
+  /// Intercept the system back button or any "back" pop from the scaffold.
   Future<bool> _onWillPop() async {
     final currentNavigatorState = _navigatorKeys[_currentIndex].currentState!;
     if (currentNavigatorState.canPop()) {
@@ -84,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Route table for tab #1 (Page2 and subpages).
-  /// Notice it also knows how to build Page3.1 and Page3.2 for cross-navigation from Page2.
+  /// Includes Page3.1 and Page3.2 for cross-navigation.
   Route _buildPage2Routes(RouteSettings settings) {
     late Widget page;
     switch (settings.name) {
@@ -95,10 +95,11 @@ class _HomeScreenState extends State<HomeScreen> {
         page = const Page2_1();
         break;
       case '/page3_1':
-        page = const Page3_1(); // Cross-navigation to Page3.1
+        // We'll pass route arguments (the counter) into Page3.1.
+        page = const Page3_1();
         break;
       case '/page3_2':
-        page = const Page3_2(); // Cross-navigation to Page3.2
+        page = const Page3_2();
         break;
       default:
         page = const Page2();
@@ -107,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Route table for tab #2 (Page3 and subpages).
-  /// Notice it also knows how to build Page2.1 for cross-navigation from Page3.x.
+  /// Includes Page2.1 for cross-navigation.
   Route _buildPage3Routes(RouteSettings settings) {
     late Widget page;
     switch (settings.name) {
@@ -115,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
         page = const Page3();
         break;
       case '/page3_1':
+        // We'll pass route arguments (the counter) into Page3.1.
         page = const Page3_1();
         break;
       case '/page3_1_1':
@@ -124,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
         page = const Page3_2();
         break;
       case '/page2_1':
-        page = const Page2_1(); // Cross-navigation to Page2.1
+        page = const Page2_1();
         break;
       default:
         page = const Page3();
@@ -244,7 +246,10 @@ class Page2 extends StatefulWidget {
 }
 
 class _Page2State extends State<Page2> {
-  double sliderValue = 0.0;
+  /// The counter for Page2
+  int _counter = 0;
+
+  double _sliderValue = 0.0;
 
   @override
   Widget build(BuildContext context) {
@@ -257,13 +262,20 @@ class _Page2State extends State<Page2> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Slider value: $sliderValue'),
+              Text('Slider value: $_sliderValue'),
               const SizedBox(height: 16),
               Slider(
-                value: sliderValue,
-                onChanged: (val) => setState(() => sliderValue = val),
+                value: _sliderValue,
+                onChanged: (val) => setState(() => _sliderValue = val),
                 min: 0,
                 max: 100,
+              ),
+              const SizedBox(height: 16),
+              Text('Page2 counter: $_counter'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => setState(() => _counter++),
+                child: const Text('Increment Page2 counter'),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -272,8 +284,10 @@ class _Page2State extends State<Page2> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => Navigator.of(context).pushNamed('/page3_1'),
-                child: const Text('Go to Page3.1'),
+                // Pass the current Page2 counter to Page3.1
+                onPressed: () => Navigator.of(context)
+                    .pushNamed('/page3_1', arguments: _counter),
+                child: const Text('Go to Page3.1 with Page2\'s counter'),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -339,6 +353,9 @@ class Page3 extends StatefulWidget {
 }
 
 class _Page3State extends State<Page3> {
+  /// The counter for Page3
+  int _counter = 0;
+
   String text = "Hello from Page3!";
 
   @override
@@ -353,9 +370,18 @@ class _Page3State extends State<Page3> {
           children: <Widget>[
             Text(text),
             const SizedBox(height: 16),
+            Text('Page3 counter: $_counter'),
+            const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pushNamed('/page3_1'),
-              child: const Text('Go to Page3.1'),
+              onPressed: () => setState(() => _counter++),
+              child: const Text('Increment Page3 counter'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              // Pass the current Page3 counter to Page3.1
+              onPressed: () => Navigator.of(context)
+                  .pushNamed('/page3_1', arguments: _counter),
+              child: const Text('Go to Page3.1 with Page3\'s counter'),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -369,6 +395,7 @@ class _Page3State extends State<Page3> {
   }
 }
 
+/// Page3.1 can display the counter passed as an argument from Page2 or Page3.
 class Page3_1 extends StatefulWidget {
   const Page3_1({Key? key}) : super(key: key);
 
@@ -379,10 +406,24 @@ class Page3_1 extends StatefulWidget {
 class _Page3_1State extends State<Page3_1> {
   String userNote = "This is Page3.1";
 
-  int counter = 0;
+  /// We'll store the "origin" counter here.
+  int? _originCounter;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Grab any passed arguments from the route.
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is int) {
+      _originCounter = args;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // If no counter was provided, default to 0 for display.
+    final counterToShow = _originCounter ?? 0;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Page3.1'),
@@ -391,15 +432,13 @@ class _Page3_1State extends State<Page3_1> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Counter: $counter'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => setState(() => counter++),
-              child: const Text('Increment'),
-            ),
-            const SizedBox(height: 12),
             Text(userNote),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            Text(
+              'Counter from previous page: $counterToShow',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pushNamed('/page3_1_1'),
               child: const Text('Go to Page3.1.1'),
