@@ -11,14 +11,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Nested Navigation Example',
+      title: 'Extended Nested Navigation',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const HomeScreen(),
     );
   }
 }
 
-/// The top-level [HomeScreen] that holds the bottom navigation bar and an [IndexedStack] of navigators.
+/// The top-level [HomeScreen] that holds the bottom navigation bar and
+/// an [IndexedStack] of navigators (one per tab).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -27,7 +28,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  /// The current index of the selected tab in the bottom navigation bar.
+  /// The current index of the selected tab in the BottomNavigationBar.
   int _currentIndex = 0;
 
   /// Each tab gets its own [NavigatorState] via a [GlobalKey].
@@ -37,79 +38,98 @@ class _HomeScreenState extends State<HomeScreen> {
     GlobalKey<NavigatorState>(),
   ];
 
-  /// If the current tab can pop, pop it. If it can't, allow the system back to close the app.
+  /// Intercept the Android system back button or any back pop from the scaffold.
   Future<bool> _onWillPop() async {
     final currentNavigatorState = _navigatorKeys[_currentIndex].currentState!;
     if (currentNavigatorState.canPop()) {
       currentNavigatorState.pop();
-      return false; // We handled the pop.
+      return false;
     }
-    return true; // Let the system handle it (i.e., close the app if at root).
+    return true;
   }
 
-  /// Builds a [Navigator] for each tab index.
-  /// Each navigator handles its own route stack (subpages).
+  /// A helper to build a Navigator for a given [index].
   Widget _buildNavigator(int index) {
     return Navigator(
       key: _navigatorKeys[index],
       onGenerateRoute: (RouteSettings settings) {
-        Widget page;
         switch (index) {
           case 0:
-            page = _buildPage1Routes(settings);
-            break;
+            return _buildPage1Routes(settings);
           case 1:
-            page = _buildPage2Routes(settings);
-            break;
+            return _buildPage2Routes(settings);
           case 2:
-            page = _buildPage3Routes(settings);
-            break;
+            return _buildPage3Routes(settings);
           default:
-            page = const Page1(); // Fallback
+            return MaterialPageRoute(builder: (_) => const Page1());
         }
-
-        return MaterialPageRoute<dynamic>(
-          builder: (_) => page,
-          settings: settings,
-        );
       },
     );
   }
 
-  Widget _buildPage1Routes(RouteSettings settings) {
+  /// Route table for tab #0 (Page1, Page1.1)
+  Route _buildPage1Routes(RouteSettings settings) {
+    late Widget page;
     switch (settings.name) {
-      // Default route:
       case '/':
-        return const Page1();
+        page = const Page1();
+        break;
       case '/page1_1':
-        return const Page1_1();
+        page = const Page1_1();
+        break;
       default:
-        return const Page1();
+        page = const Page1();
     }
+    return MaterialPageRoute(builder: (_) => page, settings: settings);
   }
 
-  Widget _buildPage2Routes(RouteSettings settings) {
+  /// Route table for tab #1 (Page2 and subpages).
+  /// Notice it also knows how to build Page3.1 and Page3.2 for cross-navigation from Page2.
+  Route _buildPage2Routes(RouteSettings settings) {
+    late Widget page;
     switch (settings.name) {
-      // Default route:
       case '/':
-        return const Page2();
-      default:
-        return const Page2();
-    }
-  }
-
-  Widget _buildPage3Routes(RouteSettings settings) {
-    switch (settings.name) {
-      // Default route:
-      case '/':
-        return const Page3();
+        page = const Page2();
+        break;
+      case '/page2_1':
+        page = const Page2_1();
+        break;
       case '/page3_1':
-        return const Page3_1();
-      case '/page3_1_1':
-        return const Page3_1_1();
+        page = const Page3_1(); // Cross-navigation to Page3.1
+        break;
+      case '/page3_2':
+        page = const Page3_2(); // Cross-navigation to Page3.2
+        break;
       default:
-        return const Page3();
+        page = const Page2();
     }
+    return MaterialPageRoute(builder: (_) => page, settings: settings);
+  }
+
+  /// Route table for tab #2 (Page3 and subpages).
+  /// Notice it also knows how to build Page2.1 for cross-navigation from Page3.x.
+  Route _buildPage3Routes(RouteSettings settings) {
+    late Widget page;
+    switch (settings.name) {
+      case '/':
+        page = const Page3();
+        break;
+      case '/page3_1':
+        page = const Page3_1();
+        break;
+      case '/page3_1_1':
+        page = const Page3_1_1();
+        break;
+      case '/page3_2':
+        page = const Page3_2();
+        break;
+      case '/page2_1':
+        page = const Page2_1(); // Cross-navigation to Page2.1
+        break;
+      default:
+        page = const Page3();
+    }
+    return MaterialPageRoute(builder: (_) => page, settings: settings);
   }
 
   @override
@@ -127,11 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: (int index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
+          onTap: (int index) => setState(() => _currentIndex = index),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.looks_one),
@@ -152,11 +168,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-//
-// Below are all the separate pages as stateful widgets.
-//
-
 // ------------------- Page 1 & Subpage -------------------
+
 class Page1 extends StatefulWidget {
   const Page1({Key? key}) : super(key: key);
 
@@ -180,11 +193,7 @@ class _Page1State extends State<Page1> {
             Text('Page1 counter: $counter'),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  counter++;
-                });
-              },
+              onPressed: () => setState(() => counter++),
               child: const Text('Increment'),
             ),
             const SizedBox(height: 16),
@@ -214,8 +223,6 @@ class _Page1_1State extends State<Page1_1> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Page1.1'),
-        // The default back button automatically appears
-        // as long as this isn't the initial route of the Navigator.
       ),
       body: Center(
         child: ElevatedButton(
@@ -227,7 +234,8 @@ class _Page1_1State extends State<Page1_1> {
   }
 }
 
-// ------------------- Page 2 (No subpage in example) -------------------
+// ------------------- Page 2 & Subpage -------------------
+
 class Page2 extends StatefulWidget {
   const Page2({Key? key}) : super(key: key);
 
@@ -245,15 +253,76 @@ class _Page2State extends State<Page2> {
         title: const Text('Page2'),
       ),
       body: Center(
-        child: Slider(
-          value: sliderValue,
-          onChanged: (val) {
-            setState(() {
-              sliderValue = val;
-            });
-          },
-          min: 0,
-          max: 100,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Slider value: $sliderValue'),
+              const SizedBox(height: 16),
+              Slider(
+                value: sliderValue,
+                onChanged: (val) => setState(() => sliderValue = val),
+                min: 0,
+                max: 100,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pushNamed('/page2_1'),
+                child: const Text('Go to Page2.1'),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pushNamed('/page3_1'),
+                child: const Text('Go to Page3.1'),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pushNamed('/page3_2'),
+                child: const Text('Go to Page3.2'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class Page2_1 extends StatefulWidget {
+  const Page2_1({Key? key}) : super(key: key);
+
+  @override
+  State<Page2_1> createState() => _Page2_1State();
+}
+
+class _Page2_1State extends State<Page2_1> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Page2.1'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('This is Page2.1'),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pushNamed('/page3_1'),
+              child: const Text('Go to Page3.1'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pushNamed('/page3_2'),
+              child: const Text('Go to Page3.2'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Back to Page2'),
+            ),
+          ],
         ),
       ),
     );
@@ -261,6 +330,7 @@ class _Page2State extends State<Page2> {
 }
 
 // ------------------- Page 3 & Subpages -------------------
+
 class Page3 extends StatefulWidget {
   const Page3({Key? key}) : super(key: key);
 
@@ -284,10 +354,13 @@ class _Page3State extends State<Page3> {
             Text(text),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pushNamed('/page3_1');
-              },
+              onPressed: () => Navigator.of(context).pushNamed('/page3_1'),
               child: const Text('Go to Page3.1'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pushNamed('/page3_2'),
+              child: const Text('Go to Page3.2'),
             ),
           ],
         ),
@@ -306,6 +379,8 @@ class Page3_1 extends StatefulWidget {
 class _Page3_1State extends State<Page3_1> {
   String userNote = "This is Page3.1";
 
+  int counter = 0;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -316,13 +391,23 @@ class _Page3_1State extends State<Page3_1> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Text('Counter: $counter'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => setState(() => counter++),
+              child: const Text('Increment'),
+            ),
+            const SizedBox(height: 12),
             Text(userNote),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pushNamed('/page3_1_1');
-              },
+              onPressed: () => Navigator.of(context).pushNamed('/page3_1_1'),
               child: const Text('Go to Page3.1.1'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pushNamed('/page2_1'),
+              child: const Text('Go to Page2.1'),
             ),
           ],
         ),
@@ -349,6 +434,44 @@ class _Page3_1_1State extends State<Page3_1_1> {
         child: ElevatedButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Back to Page3.1'),
+        ),
+      ),
+    );
+  }
+}
+
+class Page3_2 extends StatefulWidget {
+  const Page3_2({Key? key}) : super(key: key);
+
+  @override
+  State<Page3_2> createState() => _Page3_2State();
+}
+
+class _Page3_2State extends State<Page3_2> {
+  String info = "Welcome to Page3.2";
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Page3.2'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(info),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pushNamed('/page2_1'),
+              child: const Text('Go to Page2.1'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Back to Page3'),
+            ),
+          ],
         ),
       ),
     );
